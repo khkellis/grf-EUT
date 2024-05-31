@@ -1,0 +1,1 @@
+PKG_CPPFLAGS += -I$(PACKAGE_DIR)/core/third_party/ceres-solver-master/include

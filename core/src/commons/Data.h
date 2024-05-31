@@ -70,6 +70,10 @@ public:
 
   void set_censor_index(size_t index);
 
+  void set_high_price_index(size_t index);
+
+  void set_low_price_index(size_t index);
+
   /**
    * Sorts and gets the unique values in `samples` at variable `var`.
    *
@@ -114,6 +118,10 @@ public:
 
   double get_causal_survival_denominator(size_t row) const;
 
+  double get_high_price(size_t row) const;
+
+  double get_low_price(size_t row) const;
+
   bool is_failure(size_t row) const;
 
   double get(size_t row, size_t col) const;
@@ -131,6 +139,8 @@ private:
   nonstd::optional<size_t> causal_survival_numerator_index;
   nonstd::optional<size_t> causal_survival_denominator_index;
   nonstd::optional<size_t> censor_index;
+  nonstd::optional<size_t> high_price_index;
+  nonstd::optional<size_t> low_price_index;
 };
 
 // inline appropriate getters
@@ -176,6 +186,14 @@ inline double Data::get_causal_survival_numerator(size_t row) const {
 
 inline double Data::get_causal_survival_denominator(size_t row) const {
   return get(row, causal_survival_denominator_index.value());
+}
+
+inline double Data::get_high_price(size_t row) const {
+  return get(row, high_price_index.value());
+}
+
+inline double Data::get_low_price(size_t row) const {
+  return get(row, low_price_index.value());
 }
 
 inline bool Data::is_failure(size_t row) const {
