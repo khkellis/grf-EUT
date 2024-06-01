@@ -17,6 +17,7 @@
 
 #include "commons/utility.h"
 #include "relabeling/EUTCARARelabelingStrategy.h"
+// #include <nlopt.hpp>
 #include "ceres-solver-master/include/ceres/ceres.h"
 
 namespace grf {
