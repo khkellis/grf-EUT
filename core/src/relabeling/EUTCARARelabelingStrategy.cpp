@@ -17,8 +17,6 @@
 
 #include "commons/utility.h"
 #include "relabeling/EUTCARARelabelingStrategy.h"
-// #include <nlopt.hpp>
-#include "ceres-solver-master/include/ceres/ceres.h"
 
 namespace grf {
 
@@ -58,15 +56,35 @@ double EUTCARARelabelingStrategy::calculateEquation4(
         return loss*loss; // squared loss to facilitate gradient-based optimization
       };
 
+      // Define the derivative of the objective function with respect to theta
+      auto objectiveDerivative = [&](double theta_hat) {
+        double score_sum = 0.0;
+        double score_deriv_sum = 0.0;
+        for (size_t sample_idx : samples) {
+            score_sum += score(sample_idx, data, theta_hat);  // Sum the scores for each sample
+            score_deriv_sum += score_deriv(sample_idx, data, theta_hat); // Sum the derivatives for each sample
+        }
+        return 2*score_sum*score_deriv_sum;
+      };
+
+
 
       // Optimization Setup
-      double theta_hat = 0.0;     // Initial guess
+      double theta_hat = 0.06;     // Initial guess
       double learning_rate = 0.01; // Adjust this value as needed
       int max_iterations = 100;   // Maximum number of iterations
-      double tolerance = 1e-6;     // Stopping criterion
+      double tolerance = 1e-4 ;     // Stopping criterion
 
-    // Your implementation of Equation (4) goes here
-    // ...
+      // Gradient Descent
+      for (int i = 0; i < max_iterations; ++i) {
+          double gradient = objectiveDerivative(theta_hat); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
+          theta_hat -= learning_rate * gradient; // Update theta_hat
+
+          // Check for convergence (optional)
+          if (std::abs(gradient) < tolerance) {
+              break;
+          }
+      }
 
     this->theta = theta_hat; // Store the estimated theta_hat value
 }

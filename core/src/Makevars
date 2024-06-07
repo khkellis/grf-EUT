@@ -1,1 +1,2 @@
-PKG_CPPFLAGS += -I$(PACKAGE_DIR)/core/third_party/ceres-solver-master/include
+PKG_CPPFLAGS += -I$(PACKAGE_DIR)/core/third_party/ceres-solver-master/install/include
+PKG_LIBS += -L$(PACKAGE_DIR)/core/third_party/ceres-solver-master/install/lib -lceres

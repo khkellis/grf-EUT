@@ -36,6 +36,8 @@
 #include "splitting/factory/MultiRegressionSplittingRuleFactory.h"
 #include "splitting/factory/SurvivalSplittingRuleFactory.h"
 #include "splitting/factory/CausalSurvivalSplittingRuleFactory.h"
+#include "relabeling/EUTCARARelabelingStrategy.h"
+#include "prediction/EUTCARAPredictionStrategy.h"
 
 namespace grf {
 
@@ -145,5 +147,17 @@ ForestTrainer causal_survival_trainer(bool stabilize_splits) {
                        std::move(splitting_rule_factory),
                        std::move(prediction_strategy));
 }
+
+
+ForestTrainer regression_trainer() {
+  std::unique_ptr<RelabelingStrategy> relabeling_strategy(new EUTCARARelabelingStrategy());
+  std::unique_ptr<SplittingRuleFactory> splitting_rule_factory(new RegressionSplittingRuleFactory());
+  std::unique_ptr<DefaultPredictionStrategy> prediction_strategy(new EUTCARAPredictionStrategy());
+
+  return ForestTrainer(std::move(relabeling_strategy),
+                       std::move(splitting_rule_factory),
+                       std::move(prediction_strategy));
+}
+
 
 } // namespace grf

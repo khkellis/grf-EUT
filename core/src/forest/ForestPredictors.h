@@ -49,6 +49,8 @@ ForestPredictor survival_predictor(uint num_threads, size_t num_failures, int pr
 
 ForestPredictor causal_survival_predictor(uint num_threads);
 
+ForestPredictor EUTCARA_predictor(uint numthreads);
+
 } // namespace grf
 
 #endif //GRF_FORESTPREDICTORS_H
