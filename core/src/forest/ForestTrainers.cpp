@@ -149,14 +149,14 @@ ForestTrainer causal_survival_trainer(bool stabilize_splits) {
 }
 
 
-ForestTrainer regression_trainer() {
+ForestTrainer EUTCARA_trainer() {
   std::unique_ptr<RelabelingStrategy> relabeling_strategy(new EUTCARARelabelingStrategy());
   std::unique_ptr<SplittingRuleFactory> splitting_rule_factory(new RegressionSplittingRuleFactory());
   std::unique_ptr<DefaultPredictionStrategy> prediction_strategy(new EUTCARAPredictionStrategy());
 
   return ForestTrainer(std::move(relabeling_strategy),
                        std::move(splitting_rule_factory),
-                       std::move(prediction_strategy));
+                       nullptr);
 }
 
 

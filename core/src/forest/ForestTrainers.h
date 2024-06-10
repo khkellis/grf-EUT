@@ -48,6 +48,8 @@ ForestTrainer survival_trainer();
 
 ForestTrainer causal_survival_trainer(bool stabilize_splits);
 
+ForestTrainer EUTCARA_trainer();
+
 } // namespace grf
 
 #endif //GRF_FORESTTRAINERS_H
