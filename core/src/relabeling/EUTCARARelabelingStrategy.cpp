@@ -21,18 +21,17 @@
 namespace grf {
 
   // Constructors. If no theta is specified, then use a default value "close" to log utility.
-  EUTCARARelabelingStrategy::EUTCARARelabelingStrategy() : theta(0.06) {}
-  EUTCARARelabelingStrategy::EUTCARARelabelingStrategy(double theta) : theta(theta) {}
+  EUTCARARelabelingStrategy::EUTCARARelabelingStrategy(){};
 
 // Main relabeling function
 bool EUTCARARelabelingStrategy::relabel(
     const std::vector<size_t>& samples,
     const Data& data,
-    Eigen::ArrayXXd& responses_by_sample) {
+    Eigen::ArrayXXd& responses_by_sample) const {
 
-  calculateEquation4(samples, data);
-  double A_P = calculateEquation7(samples, data);
-  std::vector<double> eq8_results = calculateEquation8(samples, data, A_P);
+  double theta = calculateEquation4(samples, data);
+  double A_P = calculateEquation7(samples, data, theta);
+  std::vector<double> eq8_results = calculateEquation8(samples, data, A_P, theta);
 
   // Update responses_by_sample with results from Equation (8)
   for (size_t i = 0; i < samples.size(); ++i) {
@@ -45,7 +44,7 @@ bool EUTCARARelabelingStrategy::relabel(
 // Step 1: Calculate Equation (4)
 double EUTCARARelabelingStrategy::calculateEquation4(
     const std::vector<size_t>& samples,
-    const Data& data) {
+    const Data& data) const {
 
       // Define the objective function
       auto objectiveFunction = [&](double theta_hat) {
@@ -86,17 +85,16 @@ double EUTCARARelabelingStrategy::calculateEquation4(
           }
       }
 
-    this->theta = theta_hat; // Store the estimated theta_hat value
+    return theta_hat;
 }
 
 // Step 2: Calculate Equation (7)
 double EUTCARARelabelingStrategy::calculateEquation7(
     const std::vector<size_t>& samples,
-    const Data& data) const {
+    const Data& data,
+    const double theta_value) const {
 
       size_t num_samples = samples.size();
-
-      double theta_value = this->theta;
 
       double sum_val = 0.0;
 
@@ -113,14 +111,14 @@ double EUTCARARelabelingStrategy::calculateEquation7(
 std::vector<double> EUTCARARelabelingStrategy::calculateEquation8(
     const std::vector<size_t>& samples,
     const Data& data,
-    double equation7_result) const {
+    double equation7_result,
+    double theta_value) const {
 
     std::vector<double> results;
     results.reserve(samples.size());  // Reserve space in advance
 
     // generate labels for each observation
     for (size_t sample_idx : samples) {
-        double theta_value = this->theta;
         double sample_score = score(sample_idx, data, theta_value);
 
         double result_for_sample = sample_score/equation7_result;

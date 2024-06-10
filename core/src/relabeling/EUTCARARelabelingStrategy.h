@@ -35,21 +35,23 @@ public:
   // Main relabeling function (calls the three steps)
   bool relabel(const std::vector<size_t>& samples,
                const Data& data,
-               Eigen::ArrayXXd& responses_by_sample);
+               Eigen::ArrayXXd& responses_by_sample) const;
 
 private:
   // Step 1: Calculate Equation (4)
-  double calculateEquation4(const std::vector<size_t>& samples, const Data& data);
+  double calculateEquation4(const std::vector<size_t>& samples, const Data& data) const;
 
   // Step 2: Calculate Equation (7)
   double calculateEquation7(const std::vector<size_t>& samples, 
-                            const Data& data) const;
+                            const Data& data,
+                            const double theta_value) const;
 
   // Step 3: Calculate Equation (8)
   std::vector<double> calculateEquation8(
       const std::vector<size_t>& samples,
       const Data& data,
-      double equation7_result
+      double equation7_result,
+      const double theta_value
   ) const;
 
   // Any other private helper functions or member variables you might need
@@ -61,8 +63,6 @@ private:
   // Auxiliary function to calculate the derivative of psi
   double score_deriv(const size_t sample_idx, // Index of the sample to score
                      const Data& data, const size_t theta_value) const;
-
-  double theta;
 
   DISALLOW_COPY_AND_ASSIGN(EUTCARARelabelingStrategy);
 };
