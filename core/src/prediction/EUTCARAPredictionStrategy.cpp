@@ -20,6 +20,7 @@
 #include "commons/utility.h"
 #include "commons/Data.h"
 #include "prediction/EUTCARAPredictionStrategy.h"
+#include "Rcpp.h"
 
 namespace grf {
 
@@ -42,8 +43,8 @@ std::vector<double> EUTCARAPredictionStrategy::predict(
         double high_price = data.get_high_price(sample);
         double low_price = data.get_low_price(sample);
 
-        double numer = theta+low_price*log(high_price/low_price);
-        double denom = 2*theta+(low_price-high_price)*log(high_price/low_price);
+        double numer = theta+low_price*log(low_price/high_price);
+        double denom = 2*theta+(low_price-high_price)*log(low_price/high_price);
 
         return {numer/denom};
 }
@@ -75,9 +76,18 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
 
             double theta;
 
+            
+            // Convert `weights_by_sample` into a vector of sample keys
+            std::vector<unsigned long> indices;
+
+            // Extract keys into the vector
+            for (const auto& pair : weights_by_sample) {
+                indices.push_back(pair.first);
+            }           
+
             // if theta already estimated for given alphas, parameter retrieval
-            if (parameters.count(weights_by_sample)){
-                theta = parameters[weights_by_sample];
+            if (parameters.count(indices)){
+                theta = parameters[indices];
             } else{
                 // else if not yet estimated, then estimate using gradient descent
 
@@ -99,24 +109,32 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
                 };
 
                 // Optimization Setup
-                double theta_hat = 0.06;     // Initial guess
-                double learning_rate = 0.01; // Adjust this value as needed
-                int max_iterations = 100;   // Maximum number of iterations
-                double tolerance = 1e-4 ;     // Stopping criterion
+                double sqrt_theta = 0.24494897427;     // Initial guess
+                double learning_rate = 0.0003; // Adjust this value as needed
+                int max_iterations = 1;   // Maximum number of iterations
+                double tolerance = 1e-7;     // Stopping criterion
+
+                Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
+
+                double theta = sqrt_theta*sqrt_theta;
 
                 // Gradient Descent
                 for (int i = 0; i < max_iterations; ++i) {
-                    double gradient = objectiveDerivative(theta_hat); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
-                    theta_hat -= learning_rate * gradient; // Update theta_hat
+                    Rcpp::Rcout << "index is " << i << "\n";
+                    double gradient = objectiveDerivative(theta); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
+                    Rcpp::Rcout << "Gradient is " << gradient << "\n";
+                    double theta = sqrt_theta*sqrt_theta;
+                    theta -= learning_rate * gradient; // Update theta_hat
+                    sqrt_theta = sqrt(theta);
+
+                    Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
 
                     // Check for convergence (optional)
                     if (std::abs(gradient) < tolerance) {
+                        Rcpp::Rcout << "Gradient has vanished to below tolerance of " << tolerance << "\n";
                         break;
                     }
                 }
-
-                theta = theta_hat;
-            }
 
             return theta;
     }
@@ -124,7 +142,9 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
 
     // Auxiliary function: calculate the scoring function psi
     double EUTCARAPredictionStrategy::score(
-        const size_t sample_idx, const Data& data, const size_t theta_value) const {
+        const size_t sample_idx, const Data& data, const double theta_value) const {
+
+        Rcpp::Rcout << "The theta estimate at the start of score is " << theta_value << "\n";
 
     // ... (Calculate the loss for the given sample based on the data and responses)
     double high_price = data.get_high_price(sample_idx);
@@ -132,33 +152,53 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
 
     double demand = data.get_outcome(sample_idx);
 
-    double numer = theta_value+low_price*log(high_price/low_price);
-    double denom = 2*theta_value+(low_price-high_price)*log(high_price/low_price);
+    double numer = theta_value+low_price*log(low_price/high_price);
+    double denom = 2*theta_value+(low_price-high_price)*log(low_price/high_price);
 
-    double loss = numer/denom-demand;
+    double pred = std::min(numer/denom, 1.0);
+
+    double loss = pred-demand;
+
+    // Rcpp::Rcout << "The high_price is " << high_price << "\n";
+    // Rcpp::Rcout << "The low_price is " << low_price << "\n";
+    // Rcpp::Rcout << "The demand is " << demand << "\n";
+    // Rcpp::Rcout << "The theta estimate is " << theta_value << "\n";
+    // Rcpp::Rcout << "The score is " << loss << "\n";
 
     return loss;
     }
 
-
     // Auxiliary function: calculate the derivative of the scoring function psi
     double EUTCARAPredictionStrategy::score_deriv(
-        const size_t sample_idx, const Data& data, const size_t theta_value) const {
+        const size_t sample_idx, const Data& data, const double theta_value) const {
 
     // ... (Calculate the loss for the given sample based on the data and responses)
     double high_price = data.get_high_price(sample_idx);
     double low_price = data.get_low_price(sample_idx);
 
-    double demand = data.get_outcome(sample_idx);
+    double rate;
 
-    double numer = -(low_price+high_price)*log(high_price/low_price);
-    double denom = (2*theta_value+(low_price-high_price)*log(low_price/high_price)) *
+    if (log(high_price/low_price)+theta_value/high_price <= 0){
+        rate = 0;
+    } else{
+        double numer = -(low_price+high_price)*log(low_price/high_price);
+        double denom = (2*theta_value+(low_price-high_price)*log(low_price/high_price)) *
         (2*theta_value+(low_price-high_price)*log(low_price/high_price));
 
-    double rate = numer/denom-demand;
+        rate = numer/denom;
+    }
+
+    
+
+    // Rcpp::Rcout << "The high_price is " << high_price << "\n";
+    // Rcpp::Rcout << "The low_price is " << low_price << "\n";
+    // Rcpp::Rcout << "The theta estimate is " << theta_value << "\n";
+    // Rcpp::Rcout << "The score_deriv is " << rate << "\n";
 
     return rate;
     }
     
 
 } // namespace grf
+
+

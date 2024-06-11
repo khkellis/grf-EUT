@@ -58,11 +58,11 @@ private:
 
   // Auxiliary function to calculate psi
   double score(const size_t sample_idx,  // Index of the sample to score
-               const Data& data, const size_t theta_value) const;
+               const Data& data, const double theta_value) const;
 
   // Auxiliary function to calculate the derivative of psi
   double score_deriv(const size_t sample_idx, // Index of the sample to score
-                     const Data& data, const size_t theta_value) const;
+                     const Data& data, const double theta_value) const;
 
   DISALLOW_COPY_AND_ASSIGN(EUTCARARelabelingStrategy);
 };

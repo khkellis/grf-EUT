@@ -27,8 +27,28 @@
 #include "prediction/DefaultPredictionStrategy.h"
 #include "prediction/PredictionValues.h"
 #include "ObjectiveBayesDebiaser.h"
+#include <functional>
+#include <random>
 
 namespace grf {
+
+struct VectorHash {
+    std::size_t operator()(const std::vector<unsigned long>& vec) const {
+        std::hash<unsigned long> hasher; // Standard hasher for unsigned long
+        std::size_t seed = 0; 
+
+        // Use a random number generator for seed variation (optional)
+        std::random_device rd;
+        std::mt19937 gen(rd()); 
+        std::uniform_int_distribution<std::size_t> dis;
+        seed = dis(gen);
+
+        for (const auto& val : vec) {
+            seed ^= hasher(val) + 0x9e3779b9 + (seed << 6) + (seed >> 2); 
+        }
+        return seed;
+    }
+};
 
 class EUTCARAPredictionStrategy final: public DefaultPredictionStrategy {
 
@@ -54,7 +74,7 @@ public:
         size_t ci_group_size) const;
 
 private:
-    mutable std::unordered_map<std::unordered_map<size_t, double>, double> parameters;
+    mutable std::unordered_map<std::vector<unsigned long>, double, VectorHash> parameters;
 
     // Check if theta for a given weights_by_sample has been calculated - if so, then reuse
     double determine_parameters(size_t sample,
@@ -64,13 +84,16 @@ private:
 
     // Auxiliary function to calculate psi
     double score(const size_t sample_idx,  // Index of the sample to score
-                const Data& data, const size_t theta_value) const;
+                const Data& data, const double theta_value) const;
 
     // Auxiliary function to calculate the derivative of psi
     double score_deriv(const size_t sample_idx, // Index of the sample to score
-                        const Data& data, const size_t theta_value) const;
+                        const Data& data, const double theta_value) const;
 };
 
 } // namespace grf
 
 #endif // GRF_EUTCARAPREDICTIONSTRATEGY_H
+
+
+

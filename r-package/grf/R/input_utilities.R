@@ -191,6 +191,8 @@ create_train_matrices <- function(X,
                                   survival.numerator = NULL,
                                   survival.denominator = NULL,
                                   censor = NULL,
+                                  p_H = NULL,
+                                  p_L = NULL,
                                   sample.weights = FALSE) {
   out <- list()
   offset <- ncol(X) - 1
@@ -218,6 +220,14 @@ create_train_matrices <- function(X,
     out[["censor.index"]] <- offset + 1
     offset <- offset + 1
   }
+  if (!is.null(p_H)) {
+    out[["high.price.index"]] <- offset + 1
+    offset <- offset + 1
+  }
+  if (!is.null(p_L)) {
+    out[["low.price.index"]] <- offset + 1
+    offset <- offset + 1
+  }
   # Forest bindings without sample weights: sample.weights = FALSE
   # Forest bindings with sample weights:
   # -sample.weights = NULL if no weights passed
@@ -234,14 +244,28 @@ create_train_matrices <- function(X,
   }
 
   X <- as.matrix(X)
-  out[["train.matrix"]] <- as.matrix(cbind(X, outcome, treatment, instrument, survival.numerator, survival.denominator, censor, sample.weights))
+  out[["train.matrix"]] <- as.matrix(cbind(X, outcome, treatment, instrument, survival.numerator, survival.denominator, 
+                                           censor, p_H, p_L,sample.weights))
 
   out
 }
 
-create_test_matrices <- function(X) {
+create_test_matrices <- function(X,
+                                 p_H = NULL,
+                                 p_L = NULL) {
   out <- list()
-  out[["test.matrix"]] <- as.matrix(X)
+  offset <- ncol(X) - 1
+  
+  if (!is.null(p_H)) {
+    out[["high.price.test.index"]] <- offset + 1
+    offset <- offset + 1
+  }
+  if (!is.null(p_L)) {
+    out[["low.price.test.index"]] <- offset + 1
+    offset <- offset + 1
+  }
+  
+  out[["test.matrix"]] <- as.matrix(cbind(X, p_H, p_L))
 
   out
 }
@@ -311,5 +335,24 @@ validate_sandwich <- function(subset.weights) {
         "excluding zero-weighted observations."
       ))
     }
+  }
+}
+
+
+validate_prices <- function(p_H, p_L){
+  eps = 1e-6
+  if(any(p_H>p_L+eps)){
+    stop(paste(
+      "The input vector p_H refers to the price of the higher-demand good, which should always be",
+      "weakly lower than p_L. Please update your inputs or check for other issues in the code."
+    ))
+  } else if(any(p_H <= 0)){
+    stop(paste(
+      "The input vector p_H contains negative prices."
+    ))
+  } else if(any(p_L <= 0)){
+    stop(paste(
+      "The input vector p_L contains negative prices."
+    ))
   }
 }

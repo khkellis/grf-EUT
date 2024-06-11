@@ -49,6 +49,18 @@ causal_survival_predict_oob <- function(forest_object, train_matrix, num_threads
     .Call('_grf_causal_survival_predict_oob', PACKAGE = 'grf', forest_object, train_matrix, num_threads, estimate_variance)
 }
 
+EUTCARA_train <- function(train_matrix, outcome_index, sample_weight_index, high_price_index, low_price_index, use_sample_weights, mtry, num_trees, min_node_size, sample_fraction, honesty, honesty_fraction, honesty_prune_leaves, ci_group_size, alpha, imbalance_penalty, clusters, samples_per_cluster, compute_oob_predictions, num_threads, seed) {
+    .Call('_grf_EUTCARA_train', PACKAGE = 'grf', train_matrix, outcome_index, sample_weight_index, high_price_index, low_price_index, use_sample_weights, mtry, num_trees, min_node_size, sample_fraction, honesty, honesty_fraction, honesty_prune_leaves, ci_group_size, alpha, imbalance_penalty, clusters, samples_per_cluster, compute_oob_predictions, num_threads, seed)
+}
+
+EUTCARA_predict <- function(forest_object, train_matrix, outcome_index, high_price_index, low_price_index, high_price_test_index, low_price_test_index, test_matrix, num_threads, estimate_variance) {
+    .Call('_grf_EUTCARA_predict', PACKAGE = 'grf', forest_object, train_matrix, outcome_index, high_price_index, low_price_index, high_price_test_index, low_price_test_index, test_matrix, num_threads, estimate_variance)
+}
+
+EUTCARA_predict_oob <- function(forest_object, train_matrix, outcome_index, high_price_index, low_price_index, num_threads, estimate_variance) {
+    .Call('_grf_EUTCARA_predict_oob', PACKAGE = 'grf', forest_object, train_matrix, outcome_index, high_price_index, low_price_index, num_threads, estimate_variance)
+}
+
 instrumental_train <- function(train_matrix, outcome_index, treatment_index, instrument_index, sample_weight_index, use_sample_weights, mtry, num_trees, min_node_size, sample_fraction, honesty, honesty_fraction, honesty_prune_leaves, ci_group_size, reduced_form_weight, alpha, imbalance_penalty, stabilize_splits, clusters, samples_per_cluster, compute_oob_predictions, num_threads, seed) {
     .Call('_grf_instrumental_train', PACKAGE = 'grf', train_matrix, outcome_index, treatment_index, instrument_index, sample_weight_index, use_sample_weights, mtry, num_trees, min_node_size, sample_fraction, honesty, honesty_fraction, honesty_prune_leaves, ci_group_size, reduced_form_weight, alpha, imbalance_penalty, stabilize_splits, clusters, samples_per_cluster, compute_oob_predictions, num_threads, seed)
 }
