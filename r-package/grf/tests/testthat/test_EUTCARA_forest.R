@@ -119,7 +119,7 @@ test_that("EUTCARA estimates are close when given EUTCARA DGP", {
   set.seed(12)
   n <- 22
   X <- matrix(0, n, 5)
-  X[, 2] <- rnorm(n, 0, 4)
+  # X[, 2] <- rnorm(n, 0, 4)
   X[1:(n/2), 1] <- 10
   
   p_H <- runif(n, 0.01, 0.05)
@@ -133,11 +133,59 @@ test_that("EUTCARA estimates are close when given EUTCARA DGP", {
   
   Y <- c(pred_param1[1:(n/2)], pred_param2[(n/2+1):n])
   # Y <- pred_param1
+  # Y <- pred_param2
   
-  eutcara.forest <- EUTCARA_forest(X=X, Y=Y, p_H=p_H, p_L=p_L, num.trees = 1, seed=12, honesty = FALSE)
+  eutcara.forest <- EUTCARA_forest(X=X, Y=Y, p_H=p_H, p_L=p_L, num.trees = 1, seed=12, honesty = FALSE, num.threads = 10)
   eutcara.forest
+  eutcara.forest$predictions
+  eutcara.forest$`_leaf_samples`
+  eutcara.forest$predictions-Y
   
-  predict(eutcara.forest, X, p_H, p_L)
+  predictions <- predict(eutcara.forest, X, p_H, p_L, num.threads = 10)
+  predictions
+  predictions - Y
+  error <- (predictions - Y)^2
+  error$predictions
+  mean(error$predictions)
+})
+
+
+test_that("GRF-EUT can discriminate along two variables", {
+  # create a test with three subjects, each with 11 choices, that have a distinct
+  # covariate difference 
+  set.seed(12)
+  n <- 33
+  X <- matrix(0, n, 5)
+  X[1:(2*n/3), 1] <- 10 # first dimension separates 1+2 from 3
+  X[1:(n/3), 2] <- -1 # second dimension separates 1 from 2+3
+  X[(n/3+1):(2*n/3), 3] <- 3 # third dimension separates 2 from 1+3
+  
+  p_H <- runif(n, 0.01, 0.05)
+  p_L <- runif(n, 0.05, 0.1)
+  p_H[1] <- 0.01
+  p_L[1] <- 0.1
+  params <- c(0.06, 0.5, 0.25)
+  
+  pred_param1 <- (params[1]+p_L*log(p_L/p_H))/(2*params[1]+(p_L-p_H)*log(p_L/p_H))
+  pred_param2 <- (params[2]+p_L*log(p_L/p_H))/(2*params[2]+(p_L-p_H)*log(p_L/p_H))
+  pred_param3 <- (params[3]+p_L*log(p_L/p_H))/(2*params[3]+(p_L-p_H)*log(p_L/p_H))
+  
+  Y <- c(pred_param1[1:(n/3)], pred_param2[(n/3+1):(2*n/3)], pred_param3[(2*n/3+1):n])
+  # Y <- pred_param1
+  # Y <- pred_param2
+  
+  eutcara.forest <- EUTCARA_forest(X=X, Y=Y, p_H=p_H, p_L=p_L, num.trees = 1000, seed=12, honesty = FALSE, num.threads = 10)
+  eutcara.forest
+  eutcara.forest$predictions
+  eutcara.forest$`_leaf_samples`
+  eutcara.forest$predictions-Y
+  
+  predictions <- predict(eutcara.forest, X, p_H, p_L, num.threads = 10)
+  predictions
+  predictions - Y
+  error <- (predictions - Y)^2
+  error$predictions
+  mean(error$predictions)
 })
 
 

@@ -32,7 +32,7 @@ bool EUTCARARelabelingStrategy::relabel(
     Eigen::ArrayXXd& responses_by_sample) const {
 
   double theta = calculateEquation4(samples, data);
-  Rcpp::Rcout << "The final value of theta is " << theta << "\n";
+  // Rcpp::Rcout << "The final value of theta is " << theta << "\n";
   double A_P = calculateEquation7(samples, data, theta);
   std::vector<double> eq8_results = calculateEquation8(samples, data, A_P, theta);
 
@@ -41,7 +41,7 @@ bool EUTCARARelabelingStrategy::relabel(
       responses_by_sample(samples[i], 0) = eq8_results[i];
   }
 
-  Rcpp::Rcout << "The final labels are " << responses_by_sample << "\n";
+  // Rcpp::Rcout << "The final labels are " << responses_by_sample << "\n";
 
   // Rcpp::Rcout << "The new labels are " << responses_by_sample << "\n";
 
@@ -64,16 +64,16 @@ double EUTCARARelabelingStrategy::calculateEquation4(
 
       // Define the derivative of the objective function with respect to theta
       auto objectiveDerivative = [&](double theta) {
-        Rcpp::Rcout << "The theta value at the start of objectiveDerivative is " << theta << "\n";
+        // Rcpp::Rcout << "The theta value at the start of objectiveDerivative is " << theta << "\n";
         double score_sum = 0.0;
         double score_deriv_sum = 0.0;
         for (size_t sample_idx : samples) {
-            Rcpp::Rcout << "The theta value within the loop of objectiveDerivative is " << theta << "\n";
+            // Rcpp::Rcout << "The theta value within the loop of objectiveDerivative is " << theta << "\n";
             score_sum += score(sample_idx, data, theta);  // Sum the scores for each sample
             score_deriv_sum += score_deriv(sample_idx, data, theta); // Sum the derivatives for each sample
         }
-        Rcpp::Rcout << "score_sum is " << score_sum << "\n";
-        Rcpp::Rcout << "score_deriv_sum is " << score_deriv_sum << "\n";
+        // Rcpp::Rcout << "score_sum is " << score_sum << "\n";
+        // Rcpp::Rcout << "score_deriv_sum is " << score_deriv_sum << "\n";
         return 2*score_sum*score_deriv_sum;
       };
 
@@ -81,28 +81,30 @@ double EUTCARARelabelingStrategy::calculateEquation4(
 
       // Optimization Setup
       double sqrt_theta = 0.24494897427;     // Initial guess
-      double learning_rate = 0.0003; // Adjust this value as needed
-      int max_iterations = 1;   // Maximum number of iterations
+      double learning_rate = 0.03; // Adjust this value as needed
+      double decay_rate = 0.9995;   // multiplicative learning rate decay
+      int max_iterations = 5000;   // Maximum number of iterations
       double tolerance = 1e-7;     // Stopping criterion
 
-      Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
+      // Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
 
       double theta = sqrt_theta*sqrt_theta;
 
       // Gradient Descent
       for (int i = 0; i < max_iterations; ++i) {
-        Rcpp::Rcout << "index is " << i << "\n";
+        // Rcpp::Rcout << "index is " << i << "\n";
           double gradient = objectiveDerivative(theta); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
-          Rcpp::Rcout << "Gradient is " << gradient << "\n";
+          // Rcpp::Rcout << "Gradient is " << gradient << "\n";
           double theta = sqrt_theta*sqrt_theta;
           theta -= learning_rate * gradient; // Update theta_hat
+          learning_rate *= decay_rate;
           sqrt_theta = sqrt(theta);
 
-          Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
+          // Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
 
           // Check for convergence (optional)
           if (std::abs(gradient) < tolerance) {
-              Rcpp::Rcout << "Gradient has vanished to below tolerance of " << tolerance << "\n";
+              // Rcpp::Rcout << "Gradient has vanished to below tolerance of " << tolerance << "\n";
               break;
           }
       }
@@ -159,7 +161,7 @@ std::vector<double> EUTCARARelabelingStrategy::calculateEquation8(
 double EUTCARARelabelingStrategy::score(
     const size_t sample_idx, const Data& data, const double theta_value) const {
 
-    Rcpp::Rcout << "The theta estimate at the start of score is " << theta_value << "\n";
+    // Rcpp::Rcout << "The theta estimate at the start of score is " << theta_value << "\n";
 
   // ... (Calculate the loss for the given sample based on the data and responses)
   double high_price = data.get_high_price(sample_idx);

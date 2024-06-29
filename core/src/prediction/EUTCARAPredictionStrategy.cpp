@@ -21,6 +21,7 @@
 #include "commons/Data.h"
 #include "prediction/EUTCARAPredictionStrategy.h"
 #include "Rcpp.h"
+#include <algorithm>
 
 namespace grf {
 
@@ -40,13 +41,15 @@ std::vector<double> EUTCARAPredictionStrategy::predict(
 
         double theta = determine_parameters(sample, weights_by_sample, train_data, data);
 
+        // Rcpp::Rcout << "The prediction value of theta is " << theta << "\n";
+
         double high_price = data.get_high_price(sample);
         double low_price = data.get_low_price(sample);
 
         double numer = theta+low_price*log(low_price/high_price);
         double denom = 2*theta+(low_price-high_price)*log(low_price/high_price);
 
-        return {numer/denom};
+        return {std::min(numer/denom, 1.0)};
 }
 
 std::vector<double> EUTCARAPredictionStrategy::compute_variance(
@@ -74,69 +77,79 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
     const Data& train_data,
     const Data& data) const {
 
-            double theta;
+        double theta;
 
-            
-            // Convert `weights_by_sample` into a vector of sample keys
-            std::vector<unsigned long> indices;
+        
+        // Convert `weights_by_sample` into a vector of sample keys
+        std::vector<unsigned long> indices;
 
-            // Extract keys into the vector
-            for (const auto& pair : weights_by_sample) {
-                indices.push_back(pair.first);
-            }           
+        // Extract keys into the vector
+        for (const auto& pair : weights_by_sample) {
+            indices.push_back(pair.first);
+        }           
 
-            // if theta already estimated for given alphas, parameter retrieval
-            if (parameters.count(indices)){
-                theta = parameters[indices];
-            } else{
-                // else if not yet estimated, then estimate using gradient descent
+        // if theta already estimated for given alphas, parameter retrieval
+        if (parameters.count(indices)){
+            theta = parameters[indices];
+        } else{
+            // else if not yet estimated, then estimate using gradient descent
 
-                // Define the derivative of the objective function with respect to theta
-                auto objectiveDerivative = [&](double theta_hat) {
-                    double score_sum = 0.0;
-                    double score_deriv_sum = 0.0;
-                    size_t num_nonzero_weights = weights_by_sample.size();
+            // Define the derivative of the objective function with respect to theta
+            auto objectiveDerivative = [&](double theta_hat) {
+                double score_sum = 0.0;
+                double score_deriv_sum = 0.0;
+                size_t num_nonzero_weights = weights_by_sample.size();
 
-                    for (const auto& pair : weights_by_sample) {
-                        size_t key = pair.first;
-                        double weight = pair.second;
+                for (const auto& pair : weights_by_sample) {
+                    size_t key = pair.first;
+                    double weight = pair.second;
 
-                        score_sum += weight*score(key, train_data, theta_hat);  // Sum the scores for each sample
-                        score_deriv_sum += weight*score_deriv(key, train_data, theta_hat); // Sum the derivatives for each sample
-                    }
-
-                    return 2*score_sum*score_deriv_sum;
-                };
-
-                // Optimization Setup
-                double sqrt_theta = 0.24494897427;     // Initial guess
-                double learning_rate = 0.0003; // Adjust this value as needed
-                int max_iterations = 1;   // Maximum number of iterations
-                double tolerance = 1e-7;     // Stopping criterion
-
-                Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
-
-                double theta = sqrt_theta*sqrt_theta;
-
-                // Gradient Descent
-                for (int i = 0; i < max_iterations; ++i) {
-                    Rcpp::Rcout << "index is " << i << "\n";
-                    double gradient = objectiveDerivative(theta); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
-                    Rcpp::Rcout << "Gradient is " << gradient << "\n";
-                    double theta = sqrt_theta*sqrt_theta;
-                    theta -= learning_rate * gradient; // Update theta_hat
-                    sqrt_theta = sqrt(theta);
-
-                    Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
-
-                    // Check for convergence (optional)
-                    if (std::abs(gradient) < tolerance) {
-                        Rcpp::Rcout << "Gradient has vanished to below tolerance of " << tolerance << "\n";
-                        break;
-                    }
+                    score_sum += weight*score(key, train_data, theta_hat);  
+                    // Sum the scores for each sample
+                    score_deriv_sum += weight*score_deriv(key, train_data, theta_hat); 
+                    // Sum the derivatives for each sample
                 }
 
-            return theta;
+                return 2*score_sum*score_deriv_sum;
+            };
+
+            // Optimization Setup
+            double sqrt_theta = 0.24494897427;     // Initial guess
+            double learning_rate = 0.03; // Adjust this value as needed
+            double decay_rate = 0.9995;   // multiplicative learning rate decay
+            int max_iterations = 5000;   // Maximum number of iterations
+            double tolerance = 1e-7;     // Stopping criterion
+
+            // Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
+
+            theta = sqrt_theta*sqrt_theta;
+
+            // Gradient Descent
+            for (int i = 0; i < max_iterations; ++i) {
+                // Rcpp::Rcout << "index is " << i << "\n";
+                double gradient = objectiveDerivative(theta); 
+                // Calculate the gradient of objectiveFunction w.r.t. theta_hat
+                // Rcpp::Rcout << "Gradient is " << gradient << "\n";
+                theta = sqrt_theta*sqrt_theta;
+                theta -= learning_rate * gradient; // Update theta_hat
+                learning_rate *= decay_rate;
+                sqrt_theta = sqrt(theta);
+
+                // Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
+
+                // Check for convergence (optional)
+                if (std::abs(gradient) < tolerance) {
+                    // Rcpp::Rcout << "Gradient has vanished to below tolerance of " << tolerance << "\n";
+                    break;
+                }
+            }
+
+            theta = sqrt_theta * sqrt_theta;
+        }
+
+        // Rcpp::Rcout << "The final value of theta is " << theta << "\n";
+
+        return theta;
     }
 
 
@@ -144,7 +157,7 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
     double EUTCARAPredictionStrategy::score(
         const size_t sample_idx, const Data& data, const double theta_value) const {
 
-        Rcpp::Rcout << "The theta estimate at the start of score is " << theta_value << "\n";
+        // Rcpp::Rcout << "The theta estimate at the start of score is " << theta_value << "\n";
 
     // ... (Calculate the loss for the given sample based on the data and responses)
     double high_price = data.get_high_price(sample_idx);

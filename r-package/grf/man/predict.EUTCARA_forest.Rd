@@ -7,6 +7,8 @@
 \method{predict}{EUTCARA_forest}(
   object,
   newdata = NULL,
+  p_H = NULL,
+  p_L = NULL,
   num.threads = NULL,
   estimate.variance = FALSE,
   ...
