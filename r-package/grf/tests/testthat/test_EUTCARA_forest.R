@@ -198,3 +198,43 @@ score <- function(theta, theta_hat, p_H, p_L){
 score_deriv <- function(theta_hat, p_H, p_L){
   return(-(p_L+p_H)*log(p_L/p_H)/((2*theta_hat+(p_L-p_H)*log(p_L/p_H))^2))
 }
+
+
+
+test_that("GRF-EUT can handle larger data sets.", {
+  # create a test with 1000 subjects, each with 25 choices, with random covariates
+  set.seed(12)
+  n <- 1000*25
+  X <- matrix(0, n, 5)
+  X[1:(2*n/3), 1] <- 10 # first dimension separates 1+2 from 3
+  X[1:(n/3), 2] <- -1 # second dimension separates 1 from 2+3
+  X[(n/3+1):(2*n/3), 3] <- 3 # third dimension separates 2 from 1+3
+  X[, 4] <- rnorm(n, 0, 4)
+  
+  p_H <- runif(25, 0.01, 0.05)
+  p_L <- runif(25, 0.05, 0.1)
+  p_H[1] <- 0.01
+  p_L[1] <- 0.1
+  params <- (1:1000)/1000
+  
+  Y <- matrix(nrow=n, ncol=1)
+  for (i in 1:1000){
+    Y[(25*(i-1)+1):(25*i), ] <- min((params[i]+p_L*log(p_L/p_H))/(2*params[i]+(p_L-p_H)*log(p_L/p_H)), 1)
+  }
+  
+  
+  eutcara.forest <- EUTCARA_forest(X=X, Y=Y, p_H=rep(p_H, 1000), 
+                                   p_L=rep(p_L, 1000), num.trees = 100, 
+                                   seed=12, honesty = FALSE, num.threads = 10)
+  eutcara.forest
+  eutcara.forest$predictions
+  eutcara.forest$`_leaf_samples`
+  eutcara.forest$predictions-Y
+  
+  predictions <- predict(eutcara.forest, X, p_H, p_L, num.threads = 10)
+  predictions
+  predictions - Y
+  error <- (predictions - Y)^2
+  error$predictions
+  mean(error$predictions)
+})
