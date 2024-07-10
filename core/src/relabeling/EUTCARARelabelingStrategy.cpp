@@ -32,9 +32,16 @@ bool EUTCARARelabelingStrategy::relabel(
     Eigen::ArrayXXd& responses_by_sample) const {
 
   double theta = calculateEquation4(samples, data);
+
   // Rcpp::Rcout << "The final value of theta is " << theta << "\n";
+
   double A_P = calculateEquation7(samples, data, theta);
+
+  // Rcpp::Rcout << "The final value of A_P is " << A_P << "\n";
+
   std::vector<double> eq8_results = calculateEquation8(samples, data, A_P, theta);
+
+  // Rcpp::Rcout << "The final values of rho are " << eq8_results << "\n";
 
   // Update responses_by_sample with results from Equation (8)
   for (size_t i = 0; i < samples.size(); ++i) {
@@ -85,6 +92,7 @@ double EUTCARARelabelingStrategy::calculateEquation4(
       double decay_rate = 0.9995;   // multiplicative learning rate decay
       int max_iterations = 5000;   // Maximum number of iterations
       double tolerance = 1e-7;     // Stopping criterion
+      double eps = 3e-2;        // floor of theta values
 
       // Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
 
@@ -92,13 +100,21 @@ double EUTCARARelabelingStrategy::calculateEquation4(
 
       // Gradient Descent
       for (int i = 0; i < max_iterations; ++i) {
+
         // Rcpp::Rcout << "index is " << i << "\n";
+
+
           double gradient = objectiveDerivative(theta); // Calculate the gradient of objectiveFunction w.r.t. theta_hat
+
           // Rcpp::Rcout << "Gradient is " << gradient << "\n";
+          
           double theta = sqrt_theta*sqrt_theta;
           theta -= learning_rate * gradient; // Update theta_hat
+          theta = std::max(theta, eps);
           learning_rate *= decay_rate;
           sqrt_theta = sqrt(theta);
+
+          // Rcpp::Rcout << "The current value of sqrt_theta is " << sqrt_theta << "\n";
 
           // Rcpp::Rcout << "The current value of theta is " << sqrt_theta*sqrt_theta << "\n";
 

@@ -119,6 +119,7 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
             double decay_rate = 0.9995;   // multiplicative learning rate decay
             int max_iterations = 5000;   // Maximum number of iterations
             double tolerance = 1e-7;     // Stopping criterion
+            double eps = 3e-2;        // floor of theta values
 
             // Rcpp::Rcout << "The initial value of theta is " << sqrt_theta*sqrt_theta << "\n";
 
@@ -126,12 +127,18 @@ std::vector<double> EUTCARAPredictionStrategy::compute_variance(
 
             // Gradient Descent
             for (int i = 0; i < max_iterations; ++i) {
+
                 // Rcpp::Rcout << "index is " << i << "\n";
+
                 double gradient = objectiveDerivative(theta); 
+
                 // Calculate the gradient of objectiveFunction w.r.t. theta_hat
+
                 // Rcpp::Rcout << "Gradient is " << gradient << "\n";
+
                 theta = sqrt_theta*sqrt_theta;
                 theta -= learning_rate * gradient; // Update theta_hat
+                theta = std::max(theta, eps);
                 learning_rate *= decay_rate;
                 sqrt_theta = sqrt(theta);
 
